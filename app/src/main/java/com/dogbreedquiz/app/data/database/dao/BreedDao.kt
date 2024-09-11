@@ -9,7 +9,6 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.dogbreedquiz.app.data.database.entity.BreedEntity
-import com.dogbreedquiz.app.data.model.DogBreed
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -51,6 +50,12 @@ interface BreedDao {
      */
     @Query("UPDATE breeds SET is_favorite = :isFavorite WHERE id = :breedId")
     suspend fun updateFavoriteStatus(breedId: String, isFavorite: Boolean): Int
+    
+    /**
+     * Update breed's image URL
+     */
+    @Query("UPDATE breeds SET image_url = :imageUrl WHERE id = :breedId")
+    suspend fun updateBreedImage(breedId: String, imageUrl: String): Int
     
     /**
      * Update breed's expiration time (extend cache)
@@ -232,7 +237,7 @@ interface BreedDao {
             AVG(cached_at) as average_cache_time
         FROM breeds
     """)
-    suspend fun getCacheStatistics(currentTime: Long = System.currentTimeMillis()): CacheStatistics
+    suspend fun getCacheStatistics(currentTime: Long = System.currentTimeMillis()): BreedCacheStatistics
     
     /**
      * Transaction to refresh breed cache
@@ -258,9 +263,9 @@ interface BreedDao {
 }
 
 /**
- * Data class for cache statistics
+ * Data class for breed cache statistics from database queries
  */
-data class CacheStatistics(
+data class BreedCacheStatistics(
     @ColumnInfo(name = "total_breeds")
     val totalBreeds: Int,
     @ColumnInfo(name = "valid_breeds")

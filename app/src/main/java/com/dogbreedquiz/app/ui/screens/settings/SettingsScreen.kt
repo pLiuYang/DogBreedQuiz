@@ -16,8 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.dogbreedquiz.app.R
-import com.dogbreedquiz.app.data.model.DogBreed
-import com.dogbreedquiz.app.data.model.GameSettings
+import com.dogbreedquiz.app.domain.model.DogBreed
+import com.dogbreedquiz.app.domain.model.GameSettings
 import com.dogbreedquiz.app.ui.theme.DogBreedColors
 import com.dogbreedquiz.app.ui.theme.DogBreedQuizTheme
 

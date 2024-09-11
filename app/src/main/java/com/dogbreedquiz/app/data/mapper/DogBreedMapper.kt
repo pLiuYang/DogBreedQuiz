@@ -1,13 +1,15 @@
 package com.dogbreedquiz.app.data.mapper
 
 import com.dogbreedquiz.app.data.api.model.ApiBreed
-import com.dogbreedquiz.app.data.model.DogBreed
+import com.dogbreedquiz.app.domain.model.DogBreed
 import kotlin.random.Random
+
+import javax.inject.Inject
 
 /**
  * Mapper to convert API breed data to internal DogBreed model
  */
-object DogBreedMapper {
+class DogBreedMapper @Inject constructor() {
     
     /**
      * Convert ApiBreed to DogBreed with generated metadata

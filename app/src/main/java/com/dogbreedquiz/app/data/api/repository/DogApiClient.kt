@@ -15,7 +15,7 @@ import javax.inject.Singleton
  * Repository for handling dog.ceo API calls with caching and error handling
  */
 @Singleton
-class DogApiRepository @Inject constructor(
+class DogApiClient @Inject constructor(
     private val apiService: DogApiService
 ) {
     

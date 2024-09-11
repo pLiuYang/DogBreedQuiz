@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.dogbreedquiz.app.R
-import com.dogbreedquiz.app.data.model.DogBreed
+import com.dogbreedquiz.app.domain.model.DogBreed
 import com.dogbreedquiz.app.ui.theme.DogBreedColors
 import com.dogbreedquiz.app.ui.theme.DogBreedQuizTheme
 

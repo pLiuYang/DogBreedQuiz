@@ -4,7 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.dogbreedquiz.app.data.model.DogBreed
+import com.dogbreedquiz.app.domain.model.DogBreed
 
 /**
  * Room entity for storing dog breed information with cache expiration
@@ -25,6 +25,9 @@ data class BreedEntity(
     
     @ColumnInfo(name = "name")
     val name: String,
+    
+    @ColumnInfo(name = "image_url")
+    val imageUrl: String,
     
     @ColumnInfo(name = "description")
     val description: String,
@@ -74,6 +77,7 @@ data class BreedEntity(
             return BreedEntity(
                 id = dogBreed.id,
                 name = dogBreed.name,
+                imageUrl = dogBreed.imageUrl,
                 description = dogBreed.description,
                 funFact = dogBreed.funFact,
                 origin = dogBreed.origin,
@@ -91,7 +95,7 @@ data class BreedEntity(
     /**
      * Convert BreedEntity to DogBreed model
      */
-    fun toDogBreed(imageUrl: String = ""): DogBreed {
+    fun toDogBreed(): DogBreed {
         return DogBreed(
             id = id,
             name = name,
@@ -102,7 +106,8 @@ data class BreedEntity(
             size = DogBreed.Size.valueOf(size),
             temperament = temperament.split(",").map { it.trim() },
             lifeSpan = lifeSpan,
-            difficulty = DogBreed.Difficulty.valueOf(difficulty)
+            difficulty = DogBreed.Difficulty.valueOf(difficulty),
+            isFavorite = isFavorite
         )
     }
     

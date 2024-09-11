@@ -9,6 +9,7 @@ composeCompiler = "1.5.15"
 # Android SDK
 compileSdk = "36"
 minSdk = "26"
+mockkVersion = "1.13.10"
 targetSdk = "36"
 
 # Core Libraries
@@ -44,6 +45,11 @@ androidxTestRunner = "1.7.0"
 androidxTestRules = "1.7.0"
 truth = "1.4.4"
 mockk = "1.13.12"
+mockito = "5.7.0"
+mockitoKotlin = "5.2.1"
+kotlinxCoroutinesTest = "1.9.0"
+androidxArchCore = "2.2.0"
+hiltTesting = "2.57.1"
 
 # Build & Gradle
 gradle = "8.10.2"
@@ -102,6 +108,11 @@ androidx-test-runner = { group = "androidx.test", name = "runner", version.ref =
 androidx-test-rules = { group = "androidx.test", name = "rules", version.ref = "androidxTestRules" }
 truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockito" }
+mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
+androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "androidxArchCore" }
+hilt-android-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hiltTesting" }
 
 # Additional dependencies
 androidx-material = { group = "com.google.android.material", name = "material", version = "1.13.0" }
@@ -161,12 +172,16 @@ hilt = [
 test = [
     "junit",
     "truth",
-    "mockk"
+    "mockito-core",
+    "mockito-kotlin",
+    "kotlinx-coroutines-test",
+    "androidx-arch-core-testing"
 ]
 android-test = [
     "androidx-junit",
     "androidx-espresso-core",
     "androidx-test-core",
     "androidx-test-runner",
-    "androidx-test-rules"
+    "androidx-test-rules",
+    "hilt-android-testing"
 ]

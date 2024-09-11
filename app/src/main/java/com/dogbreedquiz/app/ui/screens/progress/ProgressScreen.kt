@@ -2,12 +2,9 @@ package com.dogbreedquiz.app.ui.screens.progress
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,14 +12,42 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dogbreedquiz.app.R
-import com.dogbreedquiz.app.data.model.BreedMastery
 import com.dogbreedquiz.app.ui.theme.DogBreedColors
 import com.dogbreedquiz.app.ui.theme.DogBreedQuizTheme
+import kotlin.collections.take
+
+/**
+ * Data class for progress statistics
+ */
+data class ProgressStats(
+    val totalQuizzes: Int,
+    val correctAnswers: Int,
+    val totalAnswers: Int,
+    val accuracy: Int,
+    val currentStreak: Int,
+    val bestStreak: Int
+)
+
+/**
+ * Data class for breed mastery tracking
+ */
+data class BreedMastery(
+    val breedId: String,
+    val breedName: String,
+    val correctAnswers: Int,
+    val totalAnswers: Int,
+    val masteryLevel: MasteryLevel
+) {
+    enum class MasteryLevel {
+        MASTER, EXPERT, PROFICIENT, LEARNING, NOVICE
+    }
+    
+    val accuracy: Float = if (totalAnswers > 0) correctAnswers.toFloat() / totalAnswers else 0f
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -309,15 +334,6 @@ private fun BreedMasteryRow(
         )
     }
 }
-
-data class ProgressStats(
-    val totalQuizzes: Int,
-    val correctAnswers: Int,
-    val totalAnswers: Int,
-    val accuracy: Int,
-    val currentStreak: Int,
-    val bestStreak: Int
-)
 
 private fun getSampleBreedMasteries(): List<BreedMastery> {
     return listOf(

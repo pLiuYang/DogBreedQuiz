@@ -1,7 +1,7 @@
 package com.dogbreedquiz.app.data.repository
 
 import com.dogbreedquiz.app.data.api.model.ApiResult
-import com.dogbreedquiz.app.data.api.repository.DogApiRepository
+import com.dogbreedquiz.app.data.api.repository.DogApiClient
 import com.dogbreedquiz.app.data.database.dao.BreedDao
 import com.dogbreedquiz.app.data.database.dao.CacheStatsDao
 import com.dogbreedquiz.app.data.database.dao.ImageCacheDao
@@ -9,16 +9,17 @@ import com.dogbreedquiz.app.data.database.entity.BreedEntity
 import com.dogbreedquiz.app.data.database.entity.CacheStatsEntity
 import com.dogbreedquiz.app.data.database.entity.ImageCacheEntity
 import com.dogbreedquiz.app.data.mapper.DogBreedMapper
-import com.dogbreedquiz.app.data.model.DogBreed
-import com.dogbreedquiz.app.data.model.QuizQuestion
-import com.dogbreedquiz.app.data.model.QuizSession
+import com.dogbreedquiz.app.domain.model.DogBreed
+import com.dogbreedquiz.app.domain.model.QuizQuestion
+import com.dogbreedquiz.app.domain.model.QuizSession
+import com.dogbreedquiz.app.domain.repository.CacheRepository
+import com.dogbreedquiz.app.domain.repository.CacheStatistics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.random.Random
 
 /**
  * Repository for dog breed data with comprehensive Room database caching
@@ -26,11 +27,12 @@ import kotlin.random.Random
  */
 @Singleton
 class DogBreedCacheRepository @Inject constructor(
-    private val dogApiRepository: DogApiRepository,
+    private val dogApiClient: DogApiClient,
     private val breedDao: BreedDao,
     private val imageCacheDao: ImageCacheDao,
-    private val cacheStatsDao: CacheStatsDao
-) {
+    private val cacheStatsDao: CacheStatsDao,
+    private val mapper: DogBreedMapper
+) : CacheRepository {
     
     companion object {
         private const val CACHE_DURATION_DAYS = 7L
@@ -60,14 +62,14 @@ class DogBreedCacheRepository @Inject constructor(
                         // Cache hit - return breeds without images initially
                         recordCacheHit(CacheStatsEntity.CacheType.BREEDS)
                         return@withContext cachedBreeds.map { breedEntity ->
-                            breedEntity.toDogBreed("") // Return with empty image URL initially
+                            breedEntity.toDogBreed() // Return cached breed with stored image URL
                         }
                     }
                 }
                 
                 // Cache miss - fetch from API
                 recordCacheMiss(CacheStatsEntity.CacheType.BREEDS)
-                val apiResult = dogApiRepository.getAllBreeds(forceRefresh)
+                val apiResult = dogApiClient.getAllBreeds(forceRefresh)
                 
                 when (apiResult) {
                     is ApiResult.Success -> {
@@ -82,7 +84,7 @@ class DogBreedCacheRepository @Inject constructor(
                             try {
                                 if (apiBreed.subBreeds.isEmpty()) {
                                     // Main breed without sub-breeds - create without image initially
-                                    val dogBreed = DogBreedMapper.mapApiBreedToDogBreed(
+                                    val dogBreed = mapper.mapApiBreedToDogBreed(
                                         apiBreed = apiBreed,
                                         subBreed = null,
                                         imageUrl = "" // Empty image URL initially
@@ -96,7 +98,7 @@ class DogBreedCacheRepository @Inject constructor(
                                     // Add sub-breeds (limit to 3 per main breed)
                                     val subBreedsToAdd = apiBreed.subBreeds.take(3)
                                     for (subBreed in subBreedsToAdd) {
-                                        val dogBreed = DogBreedMapper.mapApiBreedToDogBreed(
+                                        val dogBreed = mapper.mapApiBreedToDogBreed(
                                             apiBreed = apiBreed,
                                             subBreed = subBreed,
                                             imageUrl = "" // Empty image URL initially
@@ -132,7 +134,7 @@ class DogBreedCacheRepository @Inject constructor(
                         val cachedBreeds = breedDao.getAllBreeds()
                         if (cachedBreeds.isNotEmpty()) {
                             cachedBreeds.map { breedEntity ->
-                                breedEntity.toDogBreed("") // Return with empty image URL
+                                breedEntity.toDogBreed() // Return cached breed with stored image URL
                             }
                         } else {
                             // Return fallback static data
@@ -143,7 +145,7 @@ class DogBreedCacheRepository @Inject constructor(
                         // This shouldn't happen in this context
                         val cachedBreeds = breedDao.getValidBreeds()
                         cachedBreeds.map { breedEntity ->
-                            breedEntity.toDogBreed("") // Return with empty image URL
+                            breedEntity.toDogBreed() // Return cached breed with stored image URL
                         }
                     }
                 }
@@ -152,7 +154,7 @@ class DogBreedCacheRepository @Inject constructor(
                 val cachedBreeds = breedDao.getAllBreeds()
                 if (cachedBreeds.isNotEmpty()) {
                     cachedBreeds.map { breedEntity ->
-                        breedEntity.toDogBreed("") // Return with empty image URL
+                        breedEntity.toDogBreed() // Return cached breed with stored image URL
                     }
                 } else {
                     getFallbackBreeds().map { it.copy(imageUrl = "") }
@@ -168,7 +170,7 @@ class DogBreedCacheRepository @Inject constructor(
     fun getAllBreedsFlow(): Flow<List<DogBreed>> {
         return breedDao.getValidBreedsFlow().map { breedEntities ->
             breedEntities.map { breedEntity ->
-                breedEntity.toDogBreed("") // Return with empty image URL initially
+                breedEntity.toDogBreed() // Return cached breed with stored image URL
             }
         }
     }
@@ -181,7 +183,7 @@ class DogBreedCacheRepository @Inject constructor(
             val breedEntity = breedDao.getBreedById(id)
             if (breedEntity != null && breedEntity.isValid()) {
                 val primaryImage = imageCacheDao.getPrimaryImageForBreed(id)
-                breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                breedEntity.toDogBreed()
             } else {
                 // Try to fetch from API if not in cache
                 val allBreeds = getAllBreeds()
@@ -205,7 +207,7 @@ class DogBreedCacheRepository @Inject constructor(
                 // Check if image already exists in cache
                 val existingImage = imageCacheDao.getPrimaryImageForBreed(breedId)
                 if (existingImage != null && existingImage.isValid()) {
-                    return@withContext breedEntity.toDogBreed(existingImage.imageUrl)
+                    return@withContext breedEntity.toDogBreed()
                 }
 
                 // Parse breed name and sub-breed from the breed ID
@@ -215,9 +217,9 @@ class DogBreedCacheRepository @Inject constructor(
                 val subBreed = if (breedParts.size > 1) breedParts[1].replace("_", " ") else null
                 
                 val imageResult = if (subBreed != null) {
-                    dogApiRepository.getRandomBreedImage(mainBreed, subBreed)
+                    dogApiClient.getRandomBreedImage(mainBreed, subBreed)
                 } else {
-                    dogApiRepository.getRandomBreedImage(mainBreed)
+                    dogApiClient.getRandomBreedImage(mainBreed)
                 }
 
                 when (imageResult) {
@@ -237,17 +239,19 @@ class DogBreedCacheRepository @Inject constructor(
                             imageEntity.fileSize
                         )
                         
-                        breedEntity.toDogBreed(imageUrl)
+                        // Update the breed entity with the new image URL
+                        breedDao.updateBreedImage(breedId, imageUrl)
+                        breedEntity.toDogBreed()
                     }
                     else -> {
                         // Return breed with empty image URL if API fails
-                        breedEntity.toDogBreed("")
+                        breedEntity.toDogBreed()
                     }
                 }
             } catch (e: Exception) {
                 // Return breed with empty image URL on error
                 val breedEntity = breedDao.getBreedById(breedId)
-                breedEntity?.toDogBreed("")
+                breedEntity?.toDogBreed()
             }
         }
     }
@@ -274,8 +278,7 @@ class DogBreedCacheRepository @Inject constructor(
     fun getBreedByIdFlow(id: String): Flow<DogBreed?> {
         return breedDao.getBreedByIdFlow(id).map { breedEntity ->
             if (breedEntity != null && breedEntity.isValid()) {
-                val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                breedEntity.toDogBreed()
             } else {
                 null
             }
@@ -289,8 +292,7 @@ class DogBreedCacheRepository @Inject constructor(
         return withContext(Dispatchers.IO) {
             val breedEntities = breedDao.getBreedsByDifficulty(difficulty.name)
             breedEntities.map { breedEntity ->
-                val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                breedEntity.toDogBreed()
             }
         }
     }
@@ -302,8 +304,7 @@ class DogBreedCacheRepository @Inject constructor(
         return withContext(Dispatchers.IO) {
             val breedEntities = breedDao.getBreedsBySize(size.name)
             breedEntities.map { breedEntity ->
-                val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                breedEntity.toDogBreed()
             }
         }
     }
@@ -315,8 +316,7 @@ class DogBreedCacheRepository @Inject constructor(
         return withContext(Dispatchers.IO) {
             val breedEntities = breedDao.searchBreeds(query)
             breedEntities.map { breedEntity ->
-                val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                breedEntity.toDogBreed()
             }
         }
     }
@@ -328,8 +328,7 @@ class DogBreedCacheRepository @Inject constructor(
         return withContext(Dispatchers.IO) {
             val breedEntities = breedDao.getFavoriteBreeds()
             breedEntities.map { breedEntity ->
-                val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                breedEntity.toDogBreed()
             }
         }
     }
@@ -340,8 +339,7 @@ class DogBreedCacheRepository @Inject constructor(
     fun getFavoriteBreedsFlow(): Flow<List<DogBreed>> {
         return breedDao.getFavoriteBreedsFlow().map { breedEntities ->
             breedEntities.map { breedEntity ->
-                val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                breedEntity.toDogBreed()
             }
         }
     }
@@ -421,8 +419,7 @@ class DogBreedCacheRepository @Inject constructor(
         return withContext(Dispatchers.IO) {
             val breedEntities = breedDao.getRandomBreeds(count)
             breedEntities.map { breedEntity ->
-                val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                breedEntity.toDogBreed()
             }
         }
     }
@@ -432,18 +429,25 @@ class DogBreedCacheRepository @Inject constructor(
     /**
      * Clear all cached data
      */
-    suspend fun clearCache() {
+    override suspend fun clearAllCache() {
         withContext(Dispatchers.IO) {
             breedDao.deleteAllBreeds()
             imageCacheDao.deleteAllImages()
             recordCacheCleared(CacheStatsEntity.CacheType.COMBINED)
         }
     }
+
+    /**
+     * Clear all cached data (alias for interface compatibility)
+     */
+    suspend fun clearCache() {
+        clearAllCache()
+    }
     
     /**
      * Clear expired cache entries
      */
-    suspend fun clearExpiredCache() {
+    override suspend fun clearExpiredCache() {
         withContext(Dispatchers.IO) {
             val expiredBreeds = breedDao.deleteExpiredBreeds()
             val expiredImages = imageCacheDao.deleteExpiredImages()
@@ -457,7 +461,7 @@ class DogBreedCacheRepository @Inject constructor(
     /**
      * Get cache statistics
      */
-    suspend fun getCacheStatistics(): CacheStatistics {
+    override suspend fun getCacheStatistics(): CacheStatistics {
         return withContext(Dispatchers.IO) {
             val breedStats = breedDao.getCacheStatistics()
             val imageStats = imageCacheDao.getImageCacheStatistics()
@@ -481,7 +485,7 @@ class DogBreedCacheRepository @Inject constructor(
     /**
      * Perform background cache refresh for items near expiration
      */
-    suspend fun performBackgroundRefresh() {
+    override suspend fun performBackgroundRefresh() {
         withContext(Dispatchers.IO) {
             try {
                 val breedsNearExpiration = breedDao.getBreedsNearExpiration()
@@ -501,7 +505,7 @@ class DogBreedCacheRepository @Inject constructor(
     /**
      * Optimize cache by removing least accessed items if over size limit
      */
-    suspend fun optimizeCache() {
+    override suspend fun optimizeCache() {
         withContext(Dispatchers.IO) {
             try {
                 val currentCacheSize = imageCacheDao.getTotalCacheSize() ?: 0L
@@ -648,20 +652,3 @@ class DogBreedCacheRepository @Inject constructor(
         }
     }
 }
-
-/**
- * Data class for comprehensive cache statistics
- */
-data class CacheStatistics(
-    val totalBreeds: Int,
-    val validBreeds: Int,
-    val expiredBreeds: Int,
-    val favoriteBreeds: Int,
-    val totalImages: Int,
-    val validImages: Int,
-    val expiredImages: Int,
-    val totalCacheSize: Long,
-    val cacheHitRate: Float,
-    val oldestCacheTime: Long,
-    val newestCacheTime: Long
-)

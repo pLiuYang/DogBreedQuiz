@@ -22,7 +22,7 @@ import com.dogbreedquiz.app.data.database.entity.ImageCacheEntity
         ImageCacheEntity::class,
         CacheStatsEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(DatabaseConverters::class)
@@ -47,7 +47,7 @@ abstract class DogBreedDatabase : RoomDatabase() {
     
     companion object {
         const val DATABASE_NAME = "dog_breed_quiz_database"
-        const val DATABASE_VERSION = 1
+        const val DATABASE_VERSION = 2
         
         /**
          * Create database instance with proper configuration
@@ -69,8 +69,18 @@ abstract class DogBreedDatabase : RoomDatabase() {
          */
         private fun getAllMigrations(): Array<Migration> {
             return arrayOf(
-                // Future migrations will be added here
+                MIGRATION_1_2
             )
+        }
+        
+        /**
+         * Migration from version 1 to 2: Add image_url column to breeds table
+         */
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add image_url column to breeds table
+                database.execSQL("ALTER TABLE breeds ADD COLUMN image_url TEXT NOT NULL DEFAULT ''")
+            }
         }
     }
 }

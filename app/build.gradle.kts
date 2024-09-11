@@ -19,6 +19,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Add Hilt test runner for dependency injection in tests
+        testInstrumentationRunner = "com.dogbreedquiz.app.HiltTestRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -49,6 +51,14 @@ android {
 
     composeOptions {
         kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+        animationsDisabled = true
     }
 
     packaging {
@@ -110,10 +120,18 @@ dependencies {
 
     // Testing
     testImplementation(libs.bundles.test)
+    testImplementation(libs.mockk)
+    androidTestImplementation(libs.bundles.test)
     androidTestImplementation(libs.bundles.android.test)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation("org.jetbrains.kotlin:kotlin-test:1.9.10")
+
+    // Additional testing dependencies
+    kspTest(libs.hilt.compiler)
+    kspAndroidTest(libs.hilt.compiler)
 
     // Debug
     debugImplementation(libs.bundles.compose.debug)
+    testImplementation(kotlin("test"))
 }
