@@ -100,6 +100,20 @@ class DogBreedRepository @Inject constructor(
     suspend fun getRandomBreeds(count: Int): List<DogBreed> {
         return cacheRepository.getRandomBreeds(count)
     }
+
+    /**
+     * Load image for a specific breed lazily
+     */
+    suspend fun loadBreedImage(breedId: String): DogBreed? {
+        return cacheRepository.loadBreedImage(breedId)
+    }
+
+    /**
+     * Load images for multiple breeds efficiently
+     */
+    suspend fun loadBreedImages(breedIds: List<String>): Map<String, String> {
+        return cacheRepository.loadBreedImages(breedIds)
+    }
     
     /**
      * Clear the cache and force refresh from API

@@ -29,7 +29,9 @@ data class QuizUiState(
     val currentStreak: Int = 0,
     val isQuizComplete: Boolean = false,
     val quizSession: QuizSession? = null,
-    val error: String? = null
+    val error: String? = null,
+    val isLoadingImage: Boolean = false,
+    val currentQuestionImageUrl: String = ""
 )
 
 @HiltViewModel
@@ -63,6 +65,9 @@ class QuizViewModel @Inject constructor(
                     isQuizComplete = false
                 )
                 questionStartTime = System.currentTimeMillis()
+                
+                // Load image for the first question
+                loadCurrentQuestionImage()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -138,9 +143,63 @@ class QuizViewModel @Inject constructor(
                     currentQuestionIndex = nextIndex,
                     selectedAnswer = null,
                     showResult = false,
-                    isCorrect = false
+                    isCorrect = false,
+                    currentQuestionImageUrl = "",
+                    isLoadingImage = false
                 )
                 questionStartTime = System.currentTimeMillis()
+                
+                // Load image for the new question
+                loadCurrentQuestionImage()
+            }
+        }
+    }
+
+    private fun loadCurrentQuestionImage() {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            val currentQuestion = currentState.currentQuestion ?: return@launch
+            val correctBreed = currentQuestion.correctBreed
+            
+            // Skip if image already loaded
+            if (currentQuestion.imageUrl.isNotEmpty()) {
+                _uiState.value = currentState.copy(
+                    currentQuestionImageUrl = currentQuestion.imageUrl,
+                    isLoadingImage = false
+                )
+                return@launch
+            }
+            
+            _uiState.value = currentState.copy(isLoadingImage = true)
+            
+            try {
+                val breedWithImage = repository.loadBreedImage(correctBreed.id)
+                val imageUrl = breedWithImage?.imageUrl ?: ""
+                
+                // Update the current question with the loaded image
+                val updatedQuestion = currentQuestion.copy(imageUrl = imageUrl)
+                val updatedSession = currentState.quizSession?.let { session ->
+                    val updatedQuestions = session.questions.toMutableList()
+                    val questionIndex = updatedQuestions.indexOfFirst { it.id == currentQuestion.id }
+                    if (questionIndex != -1) {
+                        updatedQuestions[questionIndex] = updatedQuestion
+                        session.copy(questions = updatedQuestions)
+                    } else {
+                        session
+                    }
+                }
+                
+                _uiState.value = currentState.copy(
+                    currentQuestion = updatedQuestion,
+                    quizSession = updatedSession,
+                    currentQuestionImageUrl = imageUrl,
+                    isLoadingImage = false
+                )
+            } catch (e: Exception) {
+                _uiState.value = currentState.copy(
+                    isLoadingImage = false,
+                    currentQuestionImageUrl = ""
+                )
             }
         }
     }

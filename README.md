@@ -1,6 +1,6 @@
 # Dog Breed Quiz App
 
-A complete Android application built with Jetpack Compose that helps users learn and identify dog breeds through an engaging quiz experience.
+An Android application that helps users learn and identify dog breeds through an engaging quiz experience.
 
 ## Features
 

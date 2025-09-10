@@ -45,6 +45,7 @@ class DogBreedCacheRepository @Inject constructor(
     /**
      * Get all available dog breeds using cache-first strategy
      * Falls back to API if cache is empty or expired
+     * Images are loaded lazily when needed
      */
     suspend fun getAllBreeds(forceRefresh: Boolean = false): List<DogBreed> {
         return withContext(Dispatchers.IO) {
@@ -56,11 +57,10 @@ class DogBreedCacheRepository @Inject constructor(
                 if (!forceRefresh) {
                     val cachedBreeds = breedDao.getValidBreeds()
                     if (cachedBreeds.isNotEmpty()) {
-                        // Cache hit - get images for breeds and return
+                        // Cache hit - return breeds without images initially
                         recordCacheHit(CacheStatsEntity.CacheType.BREEDS)
                         return@withContext cachedBreeds.map { breedEntity ->
-                            val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                            breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                            breedEntity.toDogBreed("") // Return with empty image URL initially
                         }
                     }
                 }
@@ -74,7 +74,6 @@ class DogBreedCacheRepository @Inject constructor(
                         val apiBreeds = apiResult.data
                         val dogBreeds = mutableListOf<DogBreed>()
                         val breedEntities = mutableListOf<BreedEntity>()
-                        val imageEntities = mutableListOf<ImageCacheEntity>()
                         
                         // Process API breeds (limit to reasonable number)
                         val selectedBreeds = apiBreeds.take(50)
@@ -82,53 +81,31 @@ class DogBreedCacheRepository @Inject constructor(
                         for (apiBreed in selectedBreeds) {
                             try {
                                 if (apiBreed.subBreeds.isEmpty()) {
-                                    // Main breed without sub-breeds
-                                    val imageResult = dogApiRepository.getRandomBreedImage(apiBreed.name)
-                                    if (imageResult is ApiResult.Success) {
+                                    // Main breed without sub-breeds - create without image initially
+                                    val dogBreed = DogBreedMapper.mapApiBreedToDogBreed(
+                                        apiBreed = apiBreed,
+                                        subBreed = null,
+                                        imageUrl = "" // Empty image URL initially
+                                    )
+                                    dogBreeds.add(dogBreed)
+                                    
+                                    // Create database entities
+                                    val breedEntity = BreedEntity.fromDogBreed(dogBreed)
+                                    breedEntities.add(breedEntity)
+                                } else {
+                                    // Add sub-breeds (limit to 3 per main breed)
+                                    val subBreedsToAdd = apiBreed.subBreeds.take(3)
+                                    for (subBreed in subBreedsToAdd) {
                                         val dogBreed = DogBreedMapper.mapApiBreedToDogBreed(
                                             apiBreed = apiBreed,
-                                            subBreed = null,
-                                            imageUrl = imageResult.data
+                                            subBreed = subBreed,
+                                            imageUrl = "" // Empty image URL initially
                                         )
                                         dogBreeds.add(dogBreed)
                                         
                                         // Create database entities
                                         val breedEntity = BreedEntity.fromDogBreed(dogBreed)
                                         breedEntities.add(breedEntity)
-                                        
-                                        val imageEntity = ImageCacheEntity.create(
-                                            breedId = dogBreed.id,
-                                            imageUrl = imageResult.data,
-                                            imageType = ImageCacheEntity.ImageType.PRIMARY,
-                                            isPrimary = true
-                                        )
-                                        imageEntities.add(imageEntity)
-                                    }
-                                } else {
-                                    // Add sub-breeds (limit to 3 per main breed)
-                                    val subBreedsToAdd = apiBreed.subBreeds.take(3)
-                                    for (subBreed in subBreedsToAdd) {
-                                        val imageResult = dogApiRepository.getRandomBreedImage(apiBreed.name, subBreed)
-                                        if (imageResult is ApiResult.Success) {
-                                            val dogBreed = DogBreedMapper.mapApiBreedToDogBreed(
-                                                apiBreed = apiBreed,
-                                                subBreed = subBreed,
-                                                imageUrl = imageResult.data
-                                            )
-                                            dogBreeds.add(dogBreed)
-                                            
-                                            // Create database entities
-                                            val breedEntity = BreedEntity.fromDogBreed(dogBreed)
-                                            breedEntities.add(breedEntity)
-                                            
-                                            val imageEntity = ImageCacheEntity.create(
-                                                breedId = dogBreed.id,
-                                                imageUrl = imageResult.data,
-                                                imageType = ImageCacheEntity.ImageType.PRIMARY,
-                                                isPrimary = true
-                                            )
-                                            imageEntities.add(imageEntity)
-                                        }
                                     }
                                 }
                             } catch (e: Exception) {
@@ -137,20 +114,14 @@ class DogBreedCacheRepository @Inject constructor(
                             }
                         }
                         
-                        // Cache the results in database
+                        // Cache the breed data in database (without images initially)
                         if (breedEntities.isNotEmpty()) {
                             breedDao.insertBreeds(breedEntities)
-                            imageCacheDao.insertImages(imageEntities)
                             
                             // Record cache statistics
                             recordCachedItems(
                                 CacheStatsEntity.CacheType.BREEDS,
                                 breedEntities.size
-                            )
-                            recordCachedItems(
-                                CacheStatsEntity.CacheType.IMAGES,
-                                imageEntities.size,
-                                imageEntities.sumOf { it.fileSize }
                             )
                         }
                         
@@ -161,20 +132,18 @@ class DogBreedCacheRepository @Inject constructor(
                         val cachedBreeds = breedDao.getAllBreeds()
                         if (cachedBreeds.isNotEmpty()) {
                             cachedBreeds.map { breedEntity ->
-                                val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                                breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                                breedEntity.toDogBreed("") // Return with empty image URL
                             }
                         } else {
                             // Return fallback static data
-                            getFallbackBreeds()
+                            getFallbackBreeds().map { it.copy(imageUrl = "") }
                         }
                     }
                     is ApiResult.Loading -> {
                         // This shouldn't happen in this context
                         val cachedBreeds = breedDao.getValidBreeds()
                         cachedBreeds.map { breedEntity ->
-                            val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                            breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                            breedEntity.toDogBreed("") // Return with empty image URL
                         }
                     }
                 }
@@ -183,11 +152,10 @@ class DogBreedCacheRepository @Inject constructor(
                 val cachedBreeds = breedDao.getAllBreeds()
                 if (cachedBreeds.isNotEmpty()) {
                     cachedBreeds.map { breedEntity ->
-                        val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                        breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                        breedEntity.toDogBreed("") // Return with empty image URL
                     }
                 } else {
-                    getFallbackBreeds()
+                    getFallbackBreeds().map { it.copy(imageUrl = "") }
                 }
             }
         }
@@ -195,12 +163,12 @@ class DogBreedCacheRepository @Inject constructor(
     
     /**
      * Get all breeds as Flow for reactive UI updates
+     * Images are loaded lazily when needed
      */
     fun getAllBreedsFlow(): Flow<List<DogBreed>> {
         return breedDao.getValidBreedsFlow().map { breedEntities ->
             breedEntities.map { breedEntity ->
-                val primaryImage = imageCacheDao.getPrimaryImageForBreed(breedEntity.id)
-                breedEntity.toDogBreed(primaryImage?.imageUrl ?: "")
+                breedEntity.toDogBreed("") // Return with empty image URL initially
             }
         }
     }
@@ -219,6 +187,84 @@ class DogBreedCacheRepository @Inject constructor(
                 val allBreeds = getAllBreeds()
                 allBreeds.find { it.id == id }
             }
+        }
+    }
+
+    /**
+     * Load image for a specific breed lazily
+     * Returns the breed with image URL if successful
+     */
+    suspend fun loadBreedImage(breedId: String): DogBreed? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val breedEntity = breedDao.getBreedById(breedId)
+                if (breedEntity == null) {
+                    return@withContext null
+                }
+
+                // Check if image already exists in cache
+                val existingImage = imageCacheDao.getPrimaryImageForBreed(breedId)
+                if (existingImage != null && existingImage.isValid()) {
+                    return@withContext breedEntity.toDogBreed(existingImage.imageUrl)
+                }
+
+                // Parse breed name and sub-breed from the breed ID
+                // Breed IDs are in format: "main_breed" or "main_breed-sub_breed"
+                val breedParts = breedId.split("-")
+                val mainBreed = breedParts[0].replace("_", " ")
+                val subBreed = if (breedParts.size > 1) breedParts[1].replace("_", " ") else null
+                
+                val imageResult = if (subBreed != null) {
+                    dogApiRepository.getRandomBreedImage(mainBreed, subBreed)
+                } else {
+                    dogApiRepository.getRandomBreedImage(mainBreed)
+                }
+
+                when (imageResult) {
+                    is ApiResult.Success -> {
+                        val imageUrl = imageResult.data
+                        val imageEntity = ImageCacheEntity.create(
+                            breedId = breedId,
+                            imageUrl = imageUrl,
+                            imageType = ImageCacheEntity.ImageType.PRIMARY,
+                            isPrimary = true
+                        )
+                        
+                        imageCacheDao.insertImages(listOf(imageEntity))
+                        recordCachedItems(
+                            CacheStatsEntity.CacheType.IMAGES,
+                            1,
+                            imageEntity.fileSize
+                        )
+                        
+                        breedEntity.toDogBreed(imageUrl)
+                    }
+                    else -> {
+                        // Return breed with empty image URL if API fails
+                        breedEntity.toDogBreed("")
+                    }
+                }
+            } catch (e: Exception) {
+                // Return breed with empty image URL on error
+                val breedEntity = breedDao.getBreedById(breedId)
+                breedEntity?.toDogBreed("")
+            }
+        }
+    }
+
+    /**
+     * Load images for multiple breeds efficiently
+     */
+    suspend fun loadBreedImages(breedIds: List<String>): Map<String, String> {
+        return withContext(Dispatchers.IO) {
+            val results = mutableMapOf<String, String>()
+            
+            for (breedId in breedIds) {
+                val breedWithImage = loadBreedImage(breedId)
+                results[breedId] = breedWithImage?.imageUrl ?: ""
+            }
+            
+            results
         }
     }
     
@@ -311,6 +357,7 @@ class DogBreedCacheRepository @Inject constructor(
     
     /**
      * Generate quiz session with cached breeds
+     * Images are loaded lazily when the quiz is displayed
      */
     suspend fun generateQuizSession(
         difficulty: DogBreed.Difficulty = DogBreed.Difficulty.BEGINNER,
@@ -355,7 +402,7 @@ class DogBreedCacheRepository @Inject constructor(
                         id = "question_${questions.size + 1}",
                         correctBreed = correctBreed,
                         options = allOptions,
-                        imageUrl = correctBreed.imageUrl
+                        imageUrl = "" // Image will be loaded lazily
                     )
                 )
             }
