@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Dog Breed Quiz</string>
+    
+    <!-- Welcome Screen -->
+    <string name="welcome_title">DOG BREED QUIZ</string>
+    <string name="welcome_subtitle">Test Your Dog Knowledge</string>
+    <string name="welcome_description">Learn breeds while having fun!</string>
+    <string name="get_started">GET STARTED</string>
+    <string name="learn_more">LEARN MORE</string>
+    
+    <!-- Tutorial -->
+    <string name="how_to_play">How to Play</string>
+    <string name="tutorial_step_1">Look at the dog photo</string>
+    <string name="tutorial_step_2">Choose the correct breed</string>
+    <string name="tutorial_step_3">Get points for correct answers!</string>
+    <string name="next">NEXT</string>
+    <string name="back">Back</string>
+    
+    <!-- Quiz -->
+    <string name="question_format">Question %1$d of %2$d</string>
+    <string name="continue_button">CONTINUE</string>
+    <string name="got_it">GOT IT!</string>
+    
+    <!-- Feedback -->
+    <string name="excellent">EXCELLENT!</string>
+    <string name="not_quite_right">Not quite right</string>
+    <string name="correct_answer_is">The correct answer is:</string>
+    <string name="did_you_know">Did you know?</string>
+    <string name="learn_difference">Learn the difference:</string>
+    <string name="points_earned">+%1$d points</string>
+    
+    <!-- Progress -->
+    <string name="your_progress">Your Progress</string>
+    <string name="level_format">Level %1$d</string>
+    <string name="xp_format">%1$d / %2$d XP</string>
+    <string name="quiz_stats">QUIZ STATS</string>
+    <string name="total_quizzes">Total Quizzes: %1$d</string>
+    <string name="correct_answers">Correct Answers: %1$d</string>
+    <string name="accuracy">Accuracy: %1$d%%</string>
+    <string name="current_streak">Current Streak: 🔥 %1$d</string>
+    <string name="best_streak">Best Streak: 🔥 %1$d</string>
+    <string name="breed_mastery">BREED MASTERY</string>
+    <string name="view_all_breeds">📊 View All Breeds</string>
+    
+    <!-- Achievements -->
+    <string name="achievements">Achievements</string>
+    <string name="recent">RECENT</string>
+    <string name="earned">EARNED</string>
+    <string name="in_progress">IN PROGRESS</string>
+    <string name="quiz_master">Quiz Master</string>
+    <string name="complete_25_quizzes">Complete 25 quizzes</string>
+    <string name="earned_days_ago">Earned %1$d days ago</string>
+    
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="gameplay">GAMEPLAY</string>
+    <string name="difficulty_level">🎯 Difficulty Level</string>
+    <string name="question_timer">⏱️ Question Timer</string>
+    <string name="sound_effects">🔊 Sound Effects</string>
+    <string name="haptic_feedback">📳 Haptic Feedback</string>
+    <string name="notifications">NOTIFICATIONS</string>
+    <string name="daily_reminders">📱 Daily Reminders</string>
+    <string name="achievement_alerts">🏆 Achievement Alerts</string>
+    
+    <!-- Main Menu -->
+    <string name="start_quiz">START QUIZ</string>
+    <string name="learn_breeds">LEARN BREEDS</string>
+    <string name="stats">STATS</string>
+    <string name="daily_challenge">Daily Challenge</string>
+    <string name="take_challenge">TAKE CHALLENGE</string>
+    
+    <!-- Quiz Complete -->
+    <string name="quiz_complete">QUIZ COMPLETE!</string>
+    <string name="your_score">Your Score: %1$d/%2$d</string>
+    <string name="accuracy_percent">%1$d%% Accuracy</string>
+    <string name="performance">PERFORMANCE</string>
+    <string name="correct_wrong">Correct: %1$d    Wrong: %2$d</string>
+    <string name="time_taken">Time: %1$s</string>
+    <string name="new_level">New Level: %1$d → %2$d!</string>
+    <string name="share">SHARE</string>
+    <string name="retry">RETRY</string>
+    <string name="main_menu">MAIN MENU</string>
+    
+    <!-- Difficulty Levels -->
+    <string name="beginner">Beginner</string>
+    <string name="intermediate">Intermediate</string>
+    <string name="advanced">Advanced</string>
+    <string name="expert">Expert</string>
+    
+    <!-- Common -->
+    <string name="on">On</string>
+    <string name="off">Off</string>
+    <string name="loading">Loading…</string>
+    <string name="error">Error</string>
+    <string name="try_again">Try Again</string>
+    
+    <!-- Content Descriptions for Accessibility -->
+    <string name="dog_image_description">Dog breed photo for quiz question</string>
+    <string name="back_button">Navigate back</string>
+    <string name="settings_button">Open settings</string>
+    <string name="achievement_icon">Achievement badge</string>
+    <string name="progress_bar">Progress indicator</string>
+</resources>

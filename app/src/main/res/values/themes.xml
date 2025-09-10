@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.DogBreedQuiz" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <item name="android:colorPrimary">@color/primary_blue</item>
+        <item name="android:colorBackground">@color/background_white</item>
+        <item name="android:colorForeground">@color/primary_text</item>
+    </style>
+</resources>
